@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WissProductionApp</title>
+    <link rel="icon" href="\img\logo_wiss_small.png" type="image/png" />
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Bootstrap -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      function Home() {
+        return <h2>🏠 Strona główna</h2>;
+      }
+
+      function Page1() {
+        return <h2>Page 1</h2>;
+      }
+
+      function Page2() {
+        const [data, setData] = React.useState([]);
+        const [filter, setFilter] = React.useState("");
+        const tableWrapperRef = React.useRef(null);
+        const fakeScrollbarRef = React.useRef(null);
+        const [showFakeScrollbar, setShowFakeScrollbar] = React.useState(false);
+
+        function handleFile(e) {
+          const file = e.target.files[0];
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            const bstr = evt.target.result;
+            const wb = XLSX.read(bstr, { type: "binary" });
+            const wsname = wb.SheetNames[0];
+            const ws = wb.Sheets[wsname];
+            const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+            setData(json);
+          };
+          reader.readAsBinaryString(file);
+        }
+
+        // Filtrowanie
+        const filteredData = data.filter((row, i) =>
+          i === 0 || row.some(cell => String(cell).toLowerCase().includes(filter.toLowerCase()))
+        );
+
+        // Szerokość tabeli
+        const tableMinWidth = 900;
+        const tableWidth = Math.max(
+          tableMinWidth,
+          filteredData[0]?.length ? filteredData[0].length * 180 : tableMinWidth
+        );
+
+        // Synchronizacja przewijania
+        React.useEffect(() => {
+          const tableDiv = tableWrapperRef.current;
+          const fakeDiv = fakeScrollbarRef.current;
+          if (!tableDiv || !fakeDiv) return;
+
+          const onFakeScroll = () => {
+            tableDiv.scrollLeft = fakeDiv.scrollLeft;
+          };
+          const onTableScroll = () => {
+            fakeDiv.scrollLeft = tableDiv.scrollLeft;
+          };
+          fakeDiv.addEventListener("scroll", onFakeScroll);
+          tableDiv.addEventListener("scroll", onTableScroll);
+
+          // Pokazuj fake scrollbar tylko jeśli tabela jest szersza niż okno
+          const checkScrollbar = () => {
+            setShowFakeScrollbar(tableDiv.scrollWidth > tableDiv.clientWidth);
+          };
+          checkScrollbar();
+          window.addEventListener("resize", checkScrollbar);
+
+          return () => {
+            fakeDiv.removeEventListener("scroll", onFakeScroll);
+            tableDiv.removeEventListener("scroll", onTableScroll);
+            window.removeEventListener("resize", checkScrollbar);
+          };
+        }, [filteredData]);
+
+        return (
+          <div style={{ position: "relative", minHeight: "80vh" }}>
+            <h2>Wczytaj plik Excel</h2>
+            <input type="file" accept=".xlsx, .xls" onChange={handleFile} />
+            <input
+              className="form-control mt-3 mb-2"
+              type="text"
+              placeholder="Filtruj dane..."
+              value={filter}
+              onChange={e => setFilter(e.target.value)}
+            />
+            <div
+              style={{
+                width: "100%",
+                overflowX: "auto",
+                borderBottom: "1px solid #ccc"
+              }}
+              ref={tableWrapperRef}
+            >
+              <table
+                className="table table-bordered mt-3"
+                style={{ minWidth: tableWidth, whiteSpace: "nowrap" }}
+              >
+                <tbody>
+                  {filteredData.map((row, i) => (
+                    <tr key={i}>
+                      {row.map((cell, j) => (
+                        <td key={j} style={{ whiteSpace: "nowrap" }}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      }
+
+      function App() {
+        const [page, setPage] = React.useState("home");
+
+        let content;
+        if (page === "home") content = <Home />;
+        else if (page === "page1") content = <Page1 />;
+        else if (page === "page2") content = <Page2 />;
+
+        return (
+          <div className="container-fluid" style={{paddingLeft: 0, paddingRight: 0}}>
+    <nav
+      className="navbar navbar-light sticky-top"
+      style={{ backgroundColor: "#e3f2fd" }}
+    >
+      <div className="d-flex align-items-center">
+        <a
+          className="navbar-brand me-4"
+          href="#"
+          onClick={() => setPage("home")}
+          style={{ cursor: "pointer" }}
+        >
+          <img src="img/logo_wiss.png" width="70" height="30" alt="WISS" />
+        </a>
+        <button
+          className="nav-link btn btn-link me-3"
+          style={{ fontSize: "1.3rem", fontWeight: "bold", color: "#003366" }}
+          onClick={() => setPage("home")}
+        >
+          Home
+        </button>
+        <button
+          className="nav-link btn btn-link me-3"
+          style={{ fontSize: "1.3rem", fontWeight: "bold", color: "#003366" }}
+          onClick={() => setPage("page1")}
+        >
+          Page
+        </button>
+        <button
+          className="nav-link btn btn-link"
+          style={{ fontSize: "1.3rem", fontWeight: "bold", color: "#003366" }}
+          onClick={() => setPage("page2")}
+        >
+          Exele
+        </button>
+      </div>
+    </nav>
+    <hr />
+    {content}
+          </div>
+        );
+      }
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
