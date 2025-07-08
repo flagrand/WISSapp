@@ -35,7 +35,6 @@
         const [zasobFilter, setZasobFilter] = React.useState("");
         const tableWrapperRef = React.useRef(null);
 
-        // Wybierz indeksy kolumn, które chcesz wyświetlić (np. 0: Numer zlecenia, 2: Artykuł, 9: Zasób)
         const visibleIndexes = [0, 2, 9];
 
         function handleFile(e) {
@@ -56,18 +55,18 @@
         const filteredData = data.filter((row, i) => {
           if (i === 0) return true; // nagłówek
           const zasobMatch = !zasobFilter || row[9] === zasobFilter;
-          const textMatch = row.some(cell => String(cell).toLowerCase().includes(filter.toLowerCase()));
+          const textMatch = row.some((cell) =>
+            String(cell).toLowerCase().includes(filter.toLowerCase())
+          );
           return zasobMatch && textMatch;
         });
 
         // Lista unikalnych zasobów do selecta (indeks 9 = kolumna "Zasób")
-        const zasoby = Array.from(new Set(data.slice(1).map(row => row[9])))
-          .filter(z => z !== undefined && z !== "");
+        const zasoby = Array.from(
+          new Set(data.slice(1).map((row) => row[9]))
+        ).filter((z) => z !== undefined && z !== "");
 
-        // Indeksy kolumn (sprawdź w swoim pliku!):
-        // Pozycja: 10, Opisy działań (test): 17, Numer zgłoszenia: 3,
-        // Czas postulowany [h]: 13, Czas zarejestrowany [h]: 12,
-        // Działanie gotowe (ProBeda): 16, Odchylenie [%]: 15
+
         const pivotColumns = [
           { header: "Pozycja", idx: 9 },
           { header: "Opisy działań", idx: 17 },
@@ -75,7 +74,7 @@
           { header: "Czas postulowany [h]", idx: 12 },
           { header: "Czas zarejestrowany [h]", idx: 11 },
           { header: "Działanie gotowe", idx: 15 },
-          { header: "Odchylenie [%]", idx: 16 }
+          { header: "Odchylenie [%]", idx: 16 },
         ];
 
         // Funkcja do kolorowania komórki z odchyleniem
@@ -94,23 +93,25 @@
               type="text"
               placeholder="Filtruj dane..."
               value={filter}
-              onChange={e => setFilter(e.target.value)}
+              onChange={(e) => setFilter(e.target.value)}
             />
             <select
               className="form-select mb-2"
               value={zasobFilter}
-              onChange={e => setZasobFilter(e.target.value)}
+              onChange={(e) => setZasobFilter(e.target.value)}
             >
               <option value="">Wszystkie zasoby</option>
-              {zasoby.map(z => (
-                <option key={z} value={z}>{z}</option>
+              {zasoby.map((z) => (
+                <option key={z} value={z}>
+                  {z}
+                </option>
               ))}
             </select>
             <div
               style={{
                 width: "100%",
                 overflowX: "auto",
-                borderBottom: "1px solid #ccc"
+                borderBottom: "1px solid #ccc",
               }}
               ref={tableWrapperRef}
             >
@@ -120,24 +121,68 @@
               >
                 <thead>
                   <tr>
-                    {pivotColumns.map(col => (
-                      <th key={col.idx}>{col.header}</th>
+                    {pivotColumns.map((col) => (
+                      <th
+                        key={col.idx}
+                        style={
+                          col.header === "Opisy działań"
+                            ? {
+                                width: "300px",
+                                whiteSpace: "normal",
+                                wordWrap: "break-word",
+                              }
+                            : {}
+                        }
+                      >
+                        {col.header}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredData.slice(1).map((row, i) => (
                     <tr key={i}>
-                      {pivotColumns.map(col => {
+                      {pivotColumns.map((col) => {
                         if (col.header === "Odchylenie [%]") {
                           const style = getDeviationColor(row[col.idx]);
                           return (
-                            <td key={col.idx} style={style ? { ...Object.fromEntries(style.split(";").filter(Boolean).map(s => s.split(":").map(x => x.trim())))} : {}}>
+                            <td
+                              key={col.idx}
+                              style={
+                                style
+                                  ? {
+                                      ...Object.fromEntries(
+                                        style
+                                          .split(";")
+                                          .filter(Boolean)
+                                          .map((s) =>
+                                            s.split(":").map((x) => x.trim())
+                                          )
+                                      ),
+                                    }
+                                  : {}
+                              }
+                            >
                               {row[col.idx]}
                             </td>
                           );
                         }
-                        return <td key={col.idx}>{row[col.idx]}</td>;
+                        return (
+                          <td
+                            key={col.idx}
+                            style={
+                              col.header === "Opisy działań"
+                                ? {
+                                    width: "300px",
+                                    whiteSpace: "normal",
+                                    wordWrap: "break-word",
+                                  }
+                                : {}
+                            }
+                          >
+                            {row[col.idx]}
+                          </td>
+                        );
                       })}
                     </tr>
                   ))}
@@ -157,45 +202,65 @@
         else if (page === "page2") content = <Page2 />;
 
         return (
-          <div className="container-fluid" style={{paddingLeft: 0, paddingRight: 0}}>
-    <nav
-      className="navbar navbar-light sticky-top"
-      style={{ backgroundColor: "#e3f2fd" }}
-    >
-      <div className="d-flex align-items-center">
-        <a
-          className="navbar-brand me-4"
-          href="#"
-          onClick={() => setPage("home")}
-          style={{ cursor: "pointer" }}
-        >
-          <img src="img/logo_wiss.png" width="70" height="30" alt="WISS" />
-        </a>
-        <button
-          className="nav-link btn btn-link me-3"
-          style={{ fontSize: "1.3rem", fontWeight: "bold", color: "#003366" }}
-          onClick={() => setPage("home")}
-        >
-          Home
-        </button>
-        <button
-          className="nav-link btn btn-link me-3"
-          style={{ fontSize: "1.3rem", fontWeight: "bold", color: "#003366" }}
-          onClick={() => setPage("page1")}
-        >
-          Page
-        </button>
-        <button
-          className="nav-link btn btn-link"
-          style={{ fontSize: "1.3rem", fontWeight: "bold", color: "#003366" }}
-          onClick={() => setPage("page2")}
-        >
-          Exele
-        </button>
-      </div>
-    </nav>
-    <hr />
-    {content}
+          <div
+            className="container-fluid"
+            style={{ paddingLeft: 0, paddingRight: 0 }}
+          >
+            <nav
+              className="navbar navbar-light sticky-top"
+              style={{ backgroundColor: "#e3f2fd" }}
+            >
+              <div className="d-flex align-items-center">
+                <a
+                  className="navbar-brand me-4"
+                  href="#"
+                  onClick={() => setPage("home")}
+                  style={{ cursor: "pointer" }}
+                >
+                  <img
+                    src="img/logo_wiss.png"
+                    width="70"
+                    height="30"
+                    alt="WISS"
+                  />
+                </a>
+                <button
+                  className="nav-link btn btn-link me-3"
+                  style={{
+                    fontSize: "1.3rem",
+                    fontWeight: "bold",
+                    color: "#003366",
+                  }}
+                  onClick={() => setPage("home")}
+                >
+                  Home
+                </button>
+                <button
+                  className="nav-link btn btn-link me-3"
+                  style={{
+                    fontSize: "1.3rem",
+                    fontWeight: "bold",
+                    color: "#003366",
+                  }}
+                  onClick={() => setPage("page1")}
+                >
+                  Page
+                </button>
+                <button
+                  className="nav-link btn btn-link"
+                  style={{
+                    fontSize: "1.3rem",
+                    fontWeight: "bold",
+                    color: "#003366",
+                  }}
+                  onClick={() => setPage("page2")}
+                >
+                  Exele
+                </button>
+              </div>
+            </nav>
+            <hr />
+            {content}
           </div>
         );
       }
