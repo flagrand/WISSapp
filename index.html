@@ -32,9 +32,11 @@
       function Page2() {
         const [data, setData] = React.useState([]);
         const [filter, setFilter] = React.useState("");
+        const [zasobFilter, setZasobFilter] = React.useState("");
         const tableWrapperRef = React.useRef(null);
-        const fakeScrollbarRef = React.useRef(null);
-        const [showFakeScrollbar, setShowFakeScrollbar] = React.useState(false);
+
+        // Wybierz indeksy kolumn, które chcesz wyświetlić (np. 0: Numer zlecenia, 2: Artykuł, 9: Zasób)
+        const visibleIndexes = [0, 2, 9];
 
         function handleFile(e) {
           const file = e.target.files[0];
@@ -50,46 +52,38 @@
           reader.readAsBinaryString(file);
         }
 
-        // Filtrowanie
-        const filteredData = data.filter((row, i) =>
-          i === 0 || row.some(cell => String(cell).toLowerCase().includes(filter.toLowerCase()))
-        );
+        // Filtrowanie po tekście i po zasobie
+        const filteredData = data.filter((row, i) => {
+          if (i === 0) return true; // nagłówek
+          const zasobMatch = !zasobFilter || row[9] === zasobFilter;
+          const textMatch = row.some(cell => String(cell).toLowerCase().includes(filter.toLowerCase()));
+          return zasobMatch && textMatch;
+        });
 
-        // Szerokość tabeli
-        const tableMinWidth = 900;
-        const tableWidth = Math.max(
-          tableMinWidth,
-          filteredData[0]?.length ? filteredData[0].length * 180 : tableMinWidth
-        );
+        // Lista unikalnych zasobów do selecta (indeks 9 = kolumna "Zasób")
+        const zasoby = Array.from(new Set(data.slice(1).map(row => row[9])))
+          .filter(z => z !== undefined && z !== "");
 
-        // Synchronizacja przewijania
-        React.useEffect(() => {
-          const tableDiv = tableWrapperRef.current;
-          const fakeDiv = fakeScrollbarRef.current;
-          if (!tableDiv || !fakeDiv) return;
+        // Indeksy kolumn (sprawdź w swoim pliku!):
+        // Pozycja: 10, Opisy działań (test): 17, Numer zgłoszenia: 3,
+        // Czas postulowany [h]: 13, Czas zarejestrowany [h]: 12,
+        // Działanie gotowe (ProBeda): 16, Odchylenie [%]: 15
+        const pivotColumns = [
+          { header: "Pozycja", idx: 9 },
+          { header: "Opisy działań", idx: 17 },
+          { header: "Numer zgłoszenia", idx: 1 },
+          { header: "Czas postulowany [h]", idx: 12 },
+          { header: "Czas zarejestrowany [h]", idx: 11 },
+          { header: "Działanie gotowe", idx: 15 },
+          { header: "Odchylenie [%]", idx: 16 }
+        ];
 
-          const onFakeScroll = () => {
-            tableDiv.scrollLeft = fakeDiv.scrollLeft;
-          };
-          const onTableScroll = () => {
-            fakeDiv.scrollLeft = tableDiv.scrollLeft;
-          };
-          fakeDiv.addEventListener("scroll", onFakeScroll);
-          tableDiv.addEventListener("scroll", onTableScroll);
-
-          // Pokazuj fake scrollbar tylko jeśli tabela jest szersza niż okno
-          const checkScrollbar = () => {
-            setShowFakeScrollbar(tableDiv.scrollWidth > tableDiv.clientWidth);
-          };
-          checkScrollbar();
-          window.addEventListener("resize", checkScrollbar);
-
-          return () => {
-            fakeDiv.removeEventListener("scroll", onFakeScroll);
-            tableDiv.removeEventListener("scroll", onTableScroll);
-            window.removeEventListener("resize", checkScrollbar);
-          };
-        }, [filteredData]);
+        // Funkcja do kolorowania komórki z odchyleniem
+        function getDeviationColor(val) {
+          if (!val || val === "Brak czasu") return "";
+          let num = parseFloat(val.toString().replace(",", "."));
+          if (isNaN(num)) return "";
+        }
 
         return (
           <div style={{ position: "relative", minHeight: "80vh" }}>
@@ -102,6 +96,16 @@
               value={filter}
               onChange={e => setFilter(e.target.value)}
             />
+            <select
+              className="form-select mb-2"
+              value={zasobFilter}
+              onChange={e => setZasobFilter(e.target.value)}
+            >
+              <option value="">Wszystkie zasoby</option>
+              {zasoby.map(z => (
+                <option key={z} value={z}>{z}</option>
+              ))}
+            </select>
             <div
               style={{
                 width: "100%",
@@ -112,14 +116,29 @@
             >
               <table
                 className="table table-bordered mt-3"
-                style={{ minWidth: tableWidth, whiteSpace: "nowrap" }}
+                style={{ width: "auto", minWidth: 0, whiteSpace: "nowrap" }}
               >
+                <thead>
+                  <tr>
+                    {pivotColumns.map(col => (
+                      <th key={col.idx}>{col.header}</th>
+                    ))}
+                  </tr>
+                </thead>
                 <tbody>
-                  {filteredData.map((row, i) => (
+                  {filteredData.slice(1).map((row, i) => (
                     <tr key={i}>
-                      {row.map((cell, j) => (
-                        <td key={j} style={{ whiteSpace: "nowrap" }}>{cell}</td>
-                      ))}
+                      {pivotColumns.map(col => {
+                        if (col.header === "Odchylenie [%]") {
+                          const style = getDeviationColor(row[col.idx]);
+                          return (
+                            <td key={col.idx} style={style ? { ...Object.fromEntries(style.split(";").filter(Boolean).map(s => s.split(":").map(x => x.trim())))} : {}}>
+                              {row[col.idx]}
+                            </td>
+                          );
+                        }
+                        return <td key={col.idx}>{row[col.idx]}</td>;
+                      })}
                     </tr>
                   ))}
                 </tbody>
